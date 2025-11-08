@@ -99,13 +99,11 @@ impl HPFile {
         dir_name: String,
         directio: bool,
     ) -> Result<HPFile> {
-        if segment_size % wr_buf_size != 0 {
-            return Err(anyhow!(
-                "Invalid segmentSize:{} writeBufferSize:{}",
-                segment_size,
-                wr_buf_size
-            ));
-        }
+        assert!(
+            segment_size > 0 && wr_buf_size > 0,
+            "Sizes must be positive"
+        );
+        assert_eq!(segment_size % wr_buf_size, 0, "Sizes must align");
 
         let (id_list, largest_id) = Self::get_file_ids(&dir_name, segment_size)?;
         let (file_map, latest_file_size) =
