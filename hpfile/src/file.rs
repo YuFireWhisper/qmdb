@@ -1,9 +1,8 @@
 use std::{
-    io::{self, SeekFrom},
+    io::{Result, SeekFrom},
     path::Path,
 };
 
-use anyhow::Result;
 use parking_lot::RwLock;
 
 pub struct Options {}
@@ -25,7 +24,7 @@ impl Options {
         self
     }
 
-    pub fn open<P: AsRef<Path>>(&self, _: P) -> Result<File, io::Error> {
+    pub fn open<P: AsRef<Path>>(&self, _: P) -> Result<File> {
         Ok(File::new())
     }
 }
@@ -56,7 +55,7 @@ impl File {
         }
     }
 
-    pub fn open<P: AsRef<Path>>(_: P) -> Result<File, io::Error> {
+    pub fn open<P: AsRef<Path>>(_: P) -> Result<File> {
         Ok(File::new())
     }
 
@@ -74,25 +73,25 @@ impl File {
         Ok(File::new())
     }
 
-    pub fn set_len(&self, len: u64) -> Result<(), io::Error> {
+    pub fn set_len(&self, len: u64) -> Result<()> {
         self.data.write().truncate(len as usize);
         Ok(())
     }
 
-    pub fn seek(&self, _: SeekFrom) -> Result<(), io::Error> {
+    pub fn seek(&self, _: SeekFrom) -> Result<()> {
         Ok(())
     }
 
-    pub fn write(&self, buffer: &[u8]) -> Result<usize, io::Error> {
+    pub fn write(&self, buffer: &[u8]) -> Result<usize> {
         self.data.write().extend_from_slice(buffer);
         Ok(0)
     }
 
-    pub fn sync_all(&self) -> Result<(), io::Error> {
+    pub fn sync_all(&self) -> Result<()> {
         Ok(())
     }
 
-    pub fn read(&self, bz: &mut [u8]) -> Result<usize, io::Error> {
+    pub fn read(&self, bz: &mut [u8]) -> Result<usize> {
         let data = self.data.read();
         let len = data.len();
         let read_len = usize::min(bz.len(), len);
@@ -103,7 +102,7 @@ impl File {
         Ok(read_len)
     }
 
-    pub fn read_at(&self, bz: &mut [u8], offset: u64) -> Result<usize, io::Error> {
+    pub fn read_at(&self, bz: &mut [u8], offset: u64) -> Result<usize> {
         let data = self.data.read();
         let len = data.len() as u64;
         if offset > data.len() as u64 {
