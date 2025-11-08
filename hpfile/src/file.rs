@@ -33,6 +33,7 @@ impl Options {
 pub struct Metadata {
     len: usize,
 }
+
 impl Metadata {
     pub fn len(&self) -> usize {
         self.len
