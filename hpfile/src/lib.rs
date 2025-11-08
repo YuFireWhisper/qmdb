@@ -32,22 +32,21 @@
 //! `TempDir` is used in unit test. It is a temporary directory created during a unit test
 //! function, and will be deleted when this test function exits.
 
-use anyhow::{anyhow, Result};
-use dashmap::DashMap;
 #[cfg(feature = "all_in_mem")]
 use file::File;
 #[cfg(not(feature = "all_in_mem"))]
-use std::{
-    fs::File,
-    os::unix::fs::{FileExt, OpenOptionsExt},
-};
+use std::fs::File;
+#[cfg(unix)]
+use std::os::unix::fs::FileExt;
 use std::{
     fs::{self, create_dir, metadata, read_dir, remove_dir_all},
-    io::{self, Seek, SeekFrom, Write},
+    io::{self, Result, Seek, SeekFrom, Write},
     path::Path,
     sync::atomic::{AtomicI64, Ordering},
     sync::Arc,
 };
+
+use dashmap::DashMap;
 
 pub mod file;
 
@@ -164,19 +163,29 @@ impl HPFile {
     }
 
     fn parse_filename(segment_size: i64, file_name: &str) -> Result<i64> {
-        let parts: Vec<_> = file_name.split("-").collect();
-        if parts.len() != 2 {
-            return Err(anyhow!(
-                "{} does not match the pattern 'FileId-segmentSize'",
-                file_name
+        let Some((id, size)) = file_name.split_once('-') else {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "{} does not match the pattern 'FileId-segmentSize'",
+                    file_name
+                ),
             ));
-        }
+        };
 
-        let id: i64 = parts[0].parse()?;
-        let size: i64 = parts[1].parse()?;
+        let id: i64 = id
+            .parse()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+        let size: i64 = size
+            .parse()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
         if segment_size != size {
-            return Err(anyhow!("Invalid Size! {}!={}", size, segment_size));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("Invalid Size! {}!={}", size, segment_size),
+            ));
         }
 
         Ok(id)
