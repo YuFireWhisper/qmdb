@@ -32,8 +32,6 @@
 //! `TempDir` is used in unit test. It is a temporary directory created during a unit test
 //! function, and will be deleted when this test function exits.
 
-pub mod file;
-
 use anyhow::{anyhow, Result};
 use dashmap::DashMap;
 #[cfg(feature = "all_in_mem")]
@@ -50,6 +48,8 @@ use std::{
     sync::atomic::{AtomicI64, Ordering},
     sync::Arc,
 };
+
+pub mod file;
 
 const PRE_READ_BUF_SIZE: usize = 512 * 1024;
 pub const IO_BLK_SIZE: usize = 512;
