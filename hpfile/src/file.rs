@@ -1,5 +1,6 @@
 use std::{
-    io::{Result, Seek, SeekFrom},
+    io::{Read, Result, Seek, SeekFrom, Write},
+    os::unix::fs::FileExt,
     path::Path,
 };
 
@@ -78,38 +79,8 @@ impl File {
         Ok(())
     }
 
-    pub fn write(&self, buffer: &[u8]) -> Result<usize> {
-        self.data.write().extend_from_slice(buffer);
-        Ok(0)
-    }
-
     pub fn sync_all(&self) -> Result<()> {
         Ok(())
-    }
-
-    pub fn read(&self, bz: &mut [u8]) -> Result<usize> {
-        let data = self.data.read();
-        let len = data.len();
-        let read_len = usize::min(bz.len(), len);
-
-        let s = &data[..read_len];
-        bz[..read_len].copy_from_slice(s);
-
-        Ok(read_len)
-    }
-
-    pub fn read_at(&self, bz: &mut [u8], offset: u64) -> Result<usize> {
-        let data = self.data.read();
-        let len = data.len() as u64;
-        if offset > data.len() as u64 {
-            return Ok(0);
-        }
-
-        let read_len = usize::min(bz.len(), (len - offset) as usize);
-        let s = &data[offset as usize..offset as usize + read_len];
-        bz[..read_len].copy_from_slice(s);
-
-        Ok(read_len)
     }
 }
 
@@ -122,5 +93,81 @@ impl Seek for File {
 impl Seek for &File {
     fn seek(&mut self, _: SeekFrom) -> Result<u64> {
         Ok(0)
+    }
+}
+
+impl Read for File {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let data = self.data.read();
+        let len = data.len();
+        let read_len = usize::min(buf.len(), len);
+
+        let s = &data[..read_len];
+        buf[..read_len].copy_from_slice(s);
+
+        Ok(read_len)
+    }
+}
+
+impl Read for &File {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        let data = self.data.read();
+        let len = data.len();
+        let read_len = usize::min(buf.len(), len);
+
+        let s = &data[..read_len];
+        buf[..read_len].copy_from_slice(s);
+
+        Ok(read_len)
+    }
+}
+
+impl Write for File {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.data.write().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl Write for &File {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.data.write().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl FileExt for File {
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> Result<usize> {
+        let offset = offset as usize;
+
+        let data = self.data.read();
+
+        if offset >= data.len() {
+            return Ok(0);
+        }
+
+        let available_len = data.len() - offset as usize;
+        let to_read = buf.len().min(available_len);
+        buf[..to_read].copy_from_slice(&data[offset..offset + to_read]);
+
+        Ok(to_read)
+    }
+
+    fn write_at(&self, buf: &[u8], offset: u64) -> Result<usize> {
+        let mut data = self.data.write();
+        let end_offset = offset as usize + buf.len();
+        if end_offset > data.len() {
+            data.resize(end_offset, 0);
+        }
+        data[offset as usize..end_offset].copy_from_slice(buf);
+        Ok(buf.len())
     }
 }
