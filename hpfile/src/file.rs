@@ -1,5 +1,5 @@
 use std::{
-    io::{Result, SeekFrom},
+    io::{Result, Seek, SeekFrom},
     path::Path,
 };
 
@@ -78,10 +78,6 @@ impl File {
         Ok(())
     }
 
-    pub fn seek(&self, _: SeekFrom) -> Result<()> {
-        Ok(())
-    }
-
     pub fn write(&self, buffer: &[u8]) -> Result<usize> {
         self.data.write().extend_from_slice(buffer);
         Ok(0)
@@ -114,5 +110,17 @@ impl File {
         bz[..read_len].copy_from_slice(s);
 
         Ok(read_len)
+    }
+}
+
+impl Seek for File {
+    fn seek(&mut self, _: SeekFrom) -> Result<u64> {
+        Ok(0)
+    }
+}
+
+impl Seek for &File {
+    fn seek(&mut self, _: SeekFrom) -> Result<u64> {
+        Ok(0)
     }
 }
