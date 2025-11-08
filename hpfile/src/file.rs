@@ -1,6 +1,7 @@
+#[cfg(unix)]
+use std::os::unix::fs::FileExt;
 use std::{
     io::{Read, Result, Seek, SeekFrom, Write},
-    os::unix::fs::FileExt,
     path::Path,
 };
 
